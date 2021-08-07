@@ -1,0 +1,12 @@
+{
+  "name": "Projekt-11",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Hrab-Jos/Projekt-11.git",
+  "author": "Hrab-Jos <josef.hrabacek@unob.cz>",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "react": "^17.0.2"
+  }
+}
