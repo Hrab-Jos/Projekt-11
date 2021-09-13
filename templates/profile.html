@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+{% extends "base.html" %}
+
+{% block javascripts %}
+	<div id="modal"></div>
+	<script src="/static/main.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1 class="title">
+  Welcome, {{ name }}!
+</h1>
+
+<div id="notifikace" data-list="{{ notifications|to_pretty_notifications_json }}" data-userid="{{current_user.id}}"></div>
+{% endblock %}
+
+
+
+</html>
