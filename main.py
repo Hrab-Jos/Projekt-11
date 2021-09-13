@@ -1,73 +1,50 @@
-# načtení potřebných modulů a funkcí
-from flask import Blueprint, abort, redirect, jsonify, url_for, render_template, make_response
-from flask_login import login_required, current_user
-from . import db
-from .forms import NotifikaceForm
-from .models import Notification, User
-from sqlalchemy import desc
-from pprint import pprint
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, login_required
 import json
 
-main = Blueprint('main', __name__)
-  
+# init SQLAlchemy so we can use it later in our models
+db = SQLAlchemy()
 
-@main.route('/profile')
-@login_required
-def profile():
-	notifications = Notification.query.order_by(Notification.time.desc()).all()
-	return render_template('profile.html', name=current_user.username, notifications=notifications)    
+def to_pretty_notifications_json(notifications):
 
-@main.route('/notification/<id>')
-@login_required
-def notification_data(id):
-	notification = Notification.query.get(id)
-	if notification is None:
-		abort(404)
-
-	usernames = list(map(lambda x: x.username, notification.seenUsers.all()))
-	return jsonify({ 'users': usernames, 'id': notification.id, 'header': notification.header, 'message': notification.message, 'date': notification.time })
-    
-
-@main.route('/notification/<id>/mark-user-seen/<userid>', methods=['POST'])
-@login_required
-def notification_seen_post(id, userid):
-	notification = Notification.query.get(id)
-	if notification is None:
-		abort(400)
-
-	user = User.query.get(userid)
-	if user is None:
-		abort(400)
+    return json.dumps(notifications, default=lambda x: {'id': x.id, 'header': x.header, 'datetime': x.time.strftime('%d.%m.%Y %H:%M')})
 
 
-	pprint(user)
-	if notification.seenUsers.filter(User.id == userid).first() is None:
-		notification.seenUsers.append(user)
-		db.session.add(notification)
-		db.session.commit()
-		return jsonify(success=True)
+def create_app():
+    app = Flask(__name__)
 
-	return jsonify(success=False)
-    
+    app.config['SECRET_KEY'] = 'secret-key-goes-here'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123456@db:5432/postgres'
+    app.static_folder = 'static'
+    app.static_url_path = '/static'
 
-@main.route('/notifikace', methods=['GET','POST'])
-@login_required
-def notifikace():
-	form=NotifikaceForm()
-	if form.validate_on_submit():
-		# create a new user with the form data. Hash the password so the plaintext version isn't saved.
-		new_notification = Notification(header=form.header.data, message=form.message.data)
+    db.init_app(app)
 
-		# add the new user to the database
-		db.session.add(new_notification)
-		db.session.commit()
+    login_manager = LoginManager()
+    login_manager.login_view = 'auth.login'
+    login_manager.init_app(app)
 
-		return redirect(url_for('main.profile'))
+    from models import User
 
-	return render_template('notifikace.html', form=form)  
+    @login_manager.user_loader
+    def load_user(user_id):
+        # since the user_id is just the primary key of our user table, use it in the query for the user
+        return User.query.get(int(user_id))
+
+    # blueprint for auth routes in our app
+    from auth import auth as auth_blueprint
+    app.register_blueprint(auth_blueprint)
+
+    # blueprint for non-auth parts of app
+    from app import main as main_blueprint
+    app.register_blueprint(main_blueprint)
+
+    import json
+
+    app.jinja_env.filters['to_pretty_notifications_json'] = to_pretty_notifications_json
+
+    return app
 
 
-@main.route('/') # při zadání adresy lokálního serveru a znaku / se spustí funkce index a vykreslí stránku index.html, 
-def index():
-	return render_template('index.html') # při vykreslení předáváme parametr datum, díky kterému na dané stránce proběhne funkce tam kde předáme parametr do dvojitých složených závorek
-    
+app = create_app()

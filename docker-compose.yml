@@ -8,3 +8,8 @@ services:
       - 5432:5432
     environment:
       POSTGRES_PASSWORD: 123456
+  
+  backend:
+    build: .
+    ports:
+      - 80:80

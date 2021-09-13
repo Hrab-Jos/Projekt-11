@@ -13,7 +13,8 @@
     "react-modal": "^3.14.3"
   },
   "scripts": {
-    "dev": "webpack watch --mode development"
+    "dev": "webpack watch --mode development",
+    "build": "webpack build --config webpack.config.prod.js"
   },
   "devDependencies": {
     "@babel/core": "^7.15.0",
